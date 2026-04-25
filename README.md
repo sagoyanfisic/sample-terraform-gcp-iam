@@ -85,17 +85,19 @@ export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/key.json"
 ### 7. Ejecutar Terraform
 
 ```bash
-cd environments/develop
+# 1. Clonar el repositorio e ingresar al entorno
+git clone <URL_DEL_REPOSITORIO>
+cd terraform-gcp-iam/environments/develop
 
-# 1. Copiar el archivo de variables de ejemplo
+# 2. Copiar el archivo de variables de ejemplo
 cp terraform.tfvars.example terraform.tfvars
 
-# 2. Editar terraform.tfvars y reemplazar "my-gcp-project-id" con tu project ID real
+# 3. Editar terraform.tfvars y reemplazar "my-gcp-project-id" con tu project ID real
 #    Ejemplo:
 #      project_id = "bwai-pucp-01"
 nano terraform.tfvars   # o usa el editor de tu preferencia
 
-# 3. Inicializar, planear y aplicar
+# 4. Inicializar, planear y aplicar
 terraform init
 terraform plan
 terraform apply

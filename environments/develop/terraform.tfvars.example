@@ -1,0 +1,12 @@
+project_id = "my-gcp-project-id"
+region     = "us-central1"
+service_accounts = {
+  "sa-backend-dev" = {
+    display_name = "Backend Service Account - Develop"
+    roles        = ["roles/storage.objectViewer", "roles/cloudsql.client"]
+  }
+  "sa-deploy-dev" = {
+    display_name = "Deploy Service Account - Develop"
+    roles        = ["roles/run.developer"]
+  }
+}

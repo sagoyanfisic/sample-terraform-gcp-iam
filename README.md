@@ -87,29 +87,18 @@ export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/key.json"
 ```bash
 cd environments/develop
 
-# Copiar el archivo de variables de ejemplo
+# 1. Copiar el archivo de variables de ejemplo
 cp terraform.tfvars.example terraform.tfvars
-# Editar terraform.tfvars con los valores reales
 
+# 2. Editar terraform.tfvars y reemplazar "my-gcp-project-id" con tu project ID real
+#    Ejemplo:
+#      project_id = "bwai-pucp-01"
+nano terraform.tfvars   # o usa el editor de tu preferencia
+
+# 3. Inicializar, planear y aplicar
 terraform init
 terraform plan
 terraform apply
-```
-
----
-
-## Cómo clonar y usar el proyecto
-
-```bash
-git clone <URL_DEL_REPOSITORIO>
-cd terraform-gcp-iam/environments/develop
-
-cp terraform.tfvars.example terraform.tfvars
-# Editar terraform.tfvars con tu project_id y service accounts
-
-terraform init
-terraform plan    # Revisar los cambios antes de aplicar
-terraform apply   # Aplicar los cambios
 ```
 
 ---
@@ -136,31 +125,129 @@ terraform-gcp-iam/
 
 ## Cómo agregar una nueva Service Account sin tocar el módulo
 
-Solo edita `terraform.tfvars` en el entorno correspondiente y agrega una nueva entrada al mapa `service_accounts`:
+El archivo `terraform.tfvars.example` incluye un bloque comentado listo para copiar. El flujo completo es:
+
+**1. Si aún no tienes el archivo de variables, créalo a partir del ejemplo y ajusta el `project_id`:**
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Abre `terraform.tfvars` y reemplaza `my-gcp-project-id` con el ID real de tu proyecto GCP:
+
+```hcl
+project_id = "bwai-pucp-01"  # <-- cambia esto
+```
+
+**2. Agrega la nueva cuenta** descomentando (o agregando) su bloque en `terraform.tfvars`:
 
 ```hcl
 service_accounts = {
-  # Cuentas existentes...
+  # Cuentas existentes — no las toques
   "sa-backend-dev" = {
     display_name = "Backend Service Account - Develop"
     roles        = ["roles/storage.objectViewer", "roles/cloudsql.client"]
   }
+  "sa-deploy-dev" = {
+    display_name = "Deploy Service Account - Develop"
+    roles        = ["roles/run.developer"]
+  }
 
-  # Nueva cuenta — solo agrega el bloque aquí:
+  # Nueva cuenta
   "sa-pubsub-dev" = {
     display_name = "PubSub Service Account - Develop"
-    roles        = ["roles/pubsub.subscriber"]
+    roles        = ["roles/pubsub.subscriber", "roles/pubsub.viewer"]
   }
 }
 ```
 
-Luego ejecuta:
+**3. Revisa qué va a crear Terraform antes de aplicar:**
+
 ```bash
 terraform plan
+```
+
+Deberías ver exactamente 3 recursos nuevos:
+- `google_service_account.this["sa-pubsub-dev"]`
+- `google_project_iam_member.this["sa-pubsub-dev__roles/pubsub.subscriber"]`
+- `google_project_iam_member.this["sa-pubsub-dev__roles/pubsub.viewer"]`
+
+Las cuentas existentes aparecerán como `no changes` — Terraform no las toca.
+
+**4. Aplica los cambios:**
+
+```bash
 terraform apply
 ```
 
 No es necesario modificar ningún archivo `.tf` del módulo.
+
+---
+
+## Cómo modificar una Service Account existente (update)
+
+Supón que `sa-backend-dev` necesita un rol adicional. Solo edita su lista `roles` en `terraform.tfvars`:
+
+```hcl
+"sa-backend-dev" = {
+  display_name = "Backend Service Account - Develop"
+  roles        = ["roles/storage.objectViewer", "roles/cloudsql.client", "roles/bigquery.dataViewer"]  # <-- rol agregado
+}
+```
+
+Ejecuta el plan para ver exactamente qué cambia:
+
+```bash
+terraform plan
+```
+
+Terraform mostrará solo el nuevo binding como `+ create` — los roles existentes no se tocan:
+
+```
+# module.iam.google_project_iam_member.this["sa-backend-dev__roles/bigquery.dataViewer"] will be created
+  + resource "google_project_iam_member" "this" { ... }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+```
+
+```bash
+terraform apply
+```
+
+---
+
+## Cómo eliminar una Service Account (destroy)
+
+Para eliminar `sa-deploy-dev`, simplemente borra su bloque de `terraform.tfvars`:
+
+```hcl
+service_accounts = {
+  "sa-backend-dev" = {
+    display_name = "Backend Service Account - Develop"
+    roles        = ["roles/storage.objectViewer", "roles/cloudsql.client"]
+  }
+  # sa-deploy-dev eliminado
+}
+```
+
+El plan mostrará los recursos a destruir:
+
+```bash
+terraform plan
+```
+
+```
+# module.iam.google_project_iam_member.this["sa-deploy-dev__roles/run.developer"] will be destroyed
+# module.iam.google_service_account.this["sa-deploy-dev"] will be destroyed
+
+Plan: 0 to add, 0 to change, 2 to destroy.
+```
+
+```bash
+terraform apply
+```
+
+> ⚠️ Eliminar una service account es irreversible en GCP. Si otra aplicación la usa, dejará de funcionar inmediatamente.
 
 ---
 

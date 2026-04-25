@@ -1,6 +1,7 @@
 project_id = "my-gcp-project-id"
 region     = "us-central1"
 service_accounts = {
+  # --- Existing accounts (do not remove) ---
   "sa-backend-dev" = {
     display_name = "Backend Service Account - Develop"
     roles        = ["roles/storage.objectViewer", "roles/cloudsql.client"]
@@ -9,4 +10,10 @@ service_accounts = {
     display_name = "Deploy Service Account - Develop"
     roles        = ["roles/run.developer"]
   }
+
+  # --- Example: add a new account by copying this block ---
+  # "sa-pubsub-dev" = {
+  #   display_name = "PubSub Service Account - Develop"
+  #   roles        = ["roles/pubsub.subscriber", "roles/pubsub.viewer"]
+  # }
 }
